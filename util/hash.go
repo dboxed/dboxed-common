@@ -19,3 +19,11 @@ func Sha256SumJson(v any) (string, error) {
 	}
 	return Sha256Sum(b), nil
 }
+
+func MustSha256SumJson(v any) string {
+	h, err := Sha256SumJson(v)
+	if err != nil {
+		panic(err)
+	}
+	return h
+}
