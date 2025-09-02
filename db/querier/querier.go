@@ -242,7 +242,8 @@ func UpdateOne[T any](q *Querier, where string, whereArgs map[string]any, update
 			return fmt.Errorf("db field %s not found in struct", k)
 		}
 
-		setValue := fmt.Sprintf(":%s", sf.FieldName)
+		argName := "_set_" + sf.FieldName
+		setValue := fmt.Sprintf(":%s", argName)
 
 		rawSql, ok := v.(RawSqlT)
 		if ok {
@@ -250,7 +251,7 @@ func UpdateOne[T any](q *Querier, where string, whereArgs map[string]any, update
 		}
 
 		sets = append(sets, fmt.Sprintf("%s = %s", sf.FieldName, setValue))
-		args[sf.FieldName] = v
+		args[argName] = v
 	}
 
 	query := fmt.Sprintf("update \"%s\"", GetTableName[T]())
@@ -278,16 +279,22 @@ func BuildWhere[T any](byFields map[string]any) (string, map[string]any, error) 
 			}
 		}
 
-		var right string
+		isNil := util.IsAnyNil(v)
+		argName := "_where_" + df.FieldName
 
+		var right string
 		if rawSql, ok := v.(RawSqlT); ok {
 			right = rawSql.SQL
+		} else if isNil {
+			right = fmt.Sprintf(" is null")
 		} else {
-			right = fmt.Sprintf("= :%s", k)
+			right = fmt.Sprintf("= :%s", argName)
 		}
 
 		where = append(where, fmt.Sprintf(`%s %s`, df.SelectName, right))
-		args[df.FieldName] = v
+		if !isNil {
+			args[argName] = v
+		}
 	}
 
 	whereStr := strings.Join(where, " and ")

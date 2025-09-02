@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 )
 
 func Ptr[T any](v T) *T {
@@ -75,4 +76,14 @@ func AtomicWriteFile(path string, b []byte, perm os.FileMode) error {
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
 	return nil
+}
+
+func IsAnyNil(v any) bool {
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
+		return rv.IsNil()
+	default:
+		return false
+	}
 }
