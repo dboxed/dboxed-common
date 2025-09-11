@@ -205,7 +205,12 @@ func UpdateOneFromStruct[T any](q *Querier, v *T, fields ...string) error {
 		"id": idValue,
 	}
 
-	fieldsMap := map[string]any{}
+	return UpdateOneByFieldsFromStruct(q, byFields, v, fields...)
+}
+
+func UpdateOneByFieldsFromStruct[T any](q *Querier, byFields map[string]any, v *T, fields ...string) error {
+	dbFields, _ := GetStructDBFields[T]()
+	updateValues := map[string]any{}
 
 	for _, f := range fields {
 		sf, ok := dbFields[f]
@@ -213,10 +218,9 @@ func UpdateOneFromStruct[T any](q *Querier, v *T, fields ...string) error {
 			return fmt.Errorf("db field %s not found in struct", f)
 		}
 		v := GetStructValueByPath(v, sf.Path)
-		fieldsMap[sf.FieldName] = v.Interface()
+		updateValues[sf.FieldName] = v.Interface()
 	}
-
-	return UpdateOneByFields[T](q, byFields, fieldsMap)
+	return UpdateOneByFields[T](q, byFields, updateValues)
 }
 
 func UpdateOneByFields[T any](q *Querier, byFields map[string]any, updateValues map[string]any) error {
