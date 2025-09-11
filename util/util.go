@@ -1,11 +1,14 @@
 package util
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
+	"time"
 )
 
 func Ptr[T any](v T) *T {
@@ -47,6 +50,27 @@ func EqualsViaJson(a any, b any) bool {
 	aj := MustJson(a)
 	bj := MustJson(b)
 	return aj == bj
+}
+
+func SleepWithContext(ctx context.Context, d time.Duration) bool {
+	select {
+	case <-time.After(d):
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func LoopWithPrintErr(ctx context.Context, name string, interval time.Duration, fn func() error) {
+	for {
+		err := fn()
+		if err != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("error in %s", name), slog.Any("error", err))
+		}
+		if !SleepWithContext(ctx, interval) {
+			return
+		}
+	}
 }
 
 func AtomicWriteFile(path string, b []byte, perm os.FileMode) error {
