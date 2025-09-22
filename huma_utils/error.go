@@ -14,7 +14,7 @@ func InitHumaErrorOverride() {
 			for _, err := range errs {
 				if util.IsSqlNotFoundError(err) {
 					status = http.StatusNotFound
-				} else if util.IsSqlUniqueConstraintViolationError(err) {
+				} else if util.IsSqlConstraintViolationError(err) {
 					status = http.StatusConflict
 				}
 			}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/mattn/go-sqlite3"
 )
 
 func IsSqlNotFoundError(err error) bool {
@@ -15,12 +16,19 @@ func IsSqlNotFoundError(err error) bool {
 	return false
 }
 
-func IsSqlUniqueConstraintViolationError(err error) bool {
+func IsSqlConstraintViolationError(err error) bool {
 	var pgErr *pgconn.PgError
-	if !errors.As(err, &pgErr) {
-		return false
+	if errors.As(err, &pgErr) {
+		if pgErr.Code == "23505" {
+			return true
+		}
 	}
-	if pgErr.Code == "23505" {
+
+	var sqliteErr sqlite3.Error
+	if errors.As(err, &sqliteErr) {
+		if int(sqliteErr.Code) == int(sqlite3.ErrConstraint) {
+			return true
+		}
 		return true
 	}
 
