@@ -424,5 +424,11 @@ func GetTableName2(t reflect.Type) string {
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
+
+	if reflect.PointerTo(t).Implements(reflect.TypeFor[HasTableName]()) {
+		i := reflect.New(t).Interface().(HasTableName)
+		return i.GetTableName()
+	}
+
 	return util.ToSnakeCase(t.Name())
 }

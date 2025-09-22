@@ -61,7 +61,7 @@ func GetStructDBFields[T any]() (map[string]StructDBField, []StructJoin) {
 	e2 := e.(*structDBFieldsCacheEntry)
 	e2.Once.Do(func() {
 		e2.fields = map[string]StructDBField{}
-		getStructDBFields2(t, t, nil, "", e2.fields, &e2.joins)
+		getStructDBFields2(t, GetTableName2(t), nil, "", e2.fields, &e2.joins)
 	})
 	return e2.fields, e2.joins
 }
@@ -69,10 +69,16 @@ func GetStructDBFields[T any]() (map[string]StructDBField, []StructJoin) {
 func getStructJoinInfo(parentType reflect.Type, field reflect.StructField) StructJoin {
 	join := StructJoin{
 		Type:           "left",
-		LeftTableName:  GetTableName2(parentType),
-		RightTableName: GetTableName2(field.Type),
+		LeftTableName:  field.Tag.Get("join_left_table"),
+		RightTableName: field.Tag.Get("join_right_table"),
 		LeftIDField:    field.Tag.Get("join_left_field"),
 		RightIDField:   field.Tag.Get("join_right_field"),
+	}
+	if join.LeftTableName == "" {
+		join.LeftTableName = GetTableName2(parentType)
+	}
+	if join.RightTableName == "" {
+		join.RightTableName = GetTableName2(field.Type)
 	}
 	if join.LeftIDField == "" {
 		join.LeftIDField = "id"
@@ -92,7 +98,7 @@ func dupPath(p []int, extra int) []int {
 	return pathCopy
 }
 
-func getStructDBFields2(t reflect.Type, nonAnonParent reflect.Type, path []int,
+func getStructDBFields2(t reflect.Type, fromTableName string, path []int,
 	fieldPrefix string,
 	retFields map[string]StructDBField, joins *[]StructJoin) {
 	if t.Kind() == reflect.Pointer {
@@ -107,12 +113,12 @@ func getStructDBFields2(t reflect.Type, nonAnonParent reflect.Type, path []int,
 		if f.Tag.Get("join") == "true" {
 			join := getStructJoinInfo(t, f)
 			*joins = append(*joins, join)
-			getStructDBFields2(f.Type, f.Type, path,
+			getStructDBFields2(f.Type, join.RightTableName, path,
 				joinPrefix(fieldPrefix, util.ToSnakeCase(f.Name)),
 				retFields, joins)
 			continue
 		} else if f.Anonymous {
-			getStructDBFields2(f.Type, nonAnonParent, path, fieldPrefix, retFields, joins)
+			getStructDBFields2(f.Type, fromTableName, path, fieldPrefix, retFields, joins)
 			continue
 		}
 		dbFieldName := f.Tag.Get("db")
@@ -120,7 +126,7 @@ func getStructDBFields2(t reflect.Type, nonAnonParent reflect.Type, path []int,
 			continue
 		}
 
-		selectName := fmt.Sprintf(`"%s"."%s"`, GetTableName2(nonAnonParent), dbFieldName)
+		selectName := fmt.Sprintf(`"%s"."%s"`, fromTableName, dbFieldName)
 		fieldName := joinPrefix(fieldPrefix, dbFieldName)
 		retFields[fieldName] = StructDBField{
 			SelectName:  selectName,
