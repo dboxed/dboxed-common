@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dboxed/dboxed-common/util"
+	"github.com/dboxed/dboxed-common/db/querier"
 )
 
 func InitHumaErrorOverride() {
@@ -12,9 +12,9 @@ func InitHumaErrorOverride() {
 	huma.NewError = func(status int, msg string, errs ...error) huma.StatusError {
 		if status == http.StatusInternalServerError {
 			for _, err := range errs {
-				if util.IsSqlNotFoundError(err) {
+				if querier.IsSqlNotFoundError(err) {
 					status = http.StatusNotFound
-				} else if util.IsSqlConstraintViolationError(err) {
+				} else if querier.IsSqlConstraintViolationError(err) {
 					status = http.StatusConflict
 				}
 			}

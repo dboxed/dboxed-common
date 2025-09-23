@@ -1,4 +1,4 @@
-package util
+package querier
 
 import (
 	"database/sql"
